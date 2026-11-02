@@ -9,6 +9,10 @@ const timerText = document.getElementById("demo");
 const clickCounter = document.getElementById("clickCounter");
 const matchCounter = document.getElementById("matchCounter");
 
+const gameOverBox = document.getElementById("gameOver");
+const resultTitle = document.getElementById("resultTitle");
+const finalClicks = document.getElementById("finalClicks");
+
 const images = [
   "anne hathway.jpg",
   "hrithik roshan.avif",
@@ -31,18 +35,16 @@ const shuffledImages = shuffle([...images, ...images]);
 
 let seconds = 60;
 let timer;
-let audioContext;
-
 let firstCard = null;
 let clicks = 0;
 let matches = 0;
 let boardLocked = false;
-let gameOver = false;
+let gameEnded = false;
 let gameStarted = false;
 
-if (timerText) timerText.textContent = "Time: 60";
-if (clickCounter) clickCounter.textContent = "Clicks: 0";
-if (matchCounter) matchCounter.textContent = "Matches: 0";
+timerText.textContent = "Time: 60";
+clickCounter.textContent = "Clicks: 0";
+matchCounter.textContent = "Matches: 0";
 
 startBtn.addEventListener("click", () => {
   if (gameStarted) return;
@@ -51,85 +53,52 @@ startBtn.addEventListener("click", () => {
   screen1.classList.add("hide");
   screen2.classList.remove("hide");
 
-  flipCardBacks.forEach((flipCardBack, index) => {
+  flipCardBacks.forEach((back, index) => {
     const img = document.createElement("img");
-
     img.src = "images/" + shuffledImages[index];
     img.alt = "Memory game card";
 
-    flipCardBack.dataset.image = shuffledImages[index];
-    flipCardBack.append(img);
+    back.dataset.image = shuffledImages[index];
+    back.appendChild(img);
   });
 
   startTimer();
-
-  // Start button click ke baad sound context start hota hai
-  try {
-    const AudioContext =
-      window.AudioContext || window.webkitAudioContext;
-
-    if (AudioContext) {
-      audioContext = new AudioContext();
-      audioContext.resume();
-    }
-  } catch (error) {
-    console.log("Audio start nahi ho paya.");
-  }
 });
 
 function startTimer() {
   timer = setInterval(() => {
     seconds--;
+    timerText.textContent = "Time: " + seconds;
 
     if (seconds <= 0) {
-      seconds = 0;
-      gameOver = true;
-      boardLocked = true;
-
-      if (timerText) timerText.textContent = "Game Over";
-
-      clearInterval(timer);
-      playBeep();
-      return;
-    }
-
-    if (timerText) {
-      timerText.textContent = "Time: " + seconds;
+      endGame("Time's up!");
     }
   }, 1000);
 }
 
-function playBeep() {
-  if (!audioContext) return;
+function endGame(title) {
+  if (gameEnded) return;
 
-  const sound = audioContext.createOscillator();
-  const volume = audioContext.createGain();
+  gameEnded = true;
+  boardLocked = true;
+  clearInterval(timer);
 
-  sound.connect(volume);
-  volume.connect(audioContext.destination);
-
-  sound.frequency.value = 800;
-  volume.gain.value = 0.2;
-
-  sound.start();
-  sound.stop(audioContext.currentTime + 0.5);
+  resultTitle.textContent = title;
+  finalClicks.textContent = clicks + " clicks";
+  gameOverBox.classList.remove("hide");
 }
 
 flipCards.forEach((card) => {
   card.addEventListener("click", () => {
-    // Game start na hua ho, time khatam ho gaya ho,
-    // ya board lock ho, toh click kaam nahi karega
-    if (!gameStarted || gameOver || boardLocked) return;
+    if (!gameStarted || gameEnded || boardLocked) return;
     if (card.classList.contains("matched")) return;
     if (card === firstCard) return;
 
     clicks++;
+    clickCounter.textContent = "Clicks: " + clicks;
 
-    if (clickCounter) {
-      clickCounter.textContent = "Clicks: " + clicks;
-    }
-
-    card.children[0].style.transform = "rotateY(180deg)";
+    const inner = card.querySelector(".flip-card-inner");
+    inner.style.transform = "rotateY(180deg)";
 
     if (firstCard === null) {
       firstCard = card;
@@ -138,34 +107,32 @@ flipCards.forEach((card) => {
 
     boardLocked = true;
 
-    const image1 = firstCard
-      .querySelector(".flip-card-back")
-      .dataset.image;
+    const firstImage = firstCard.querySelector(".flip-card-back").dataset.image;
+    const secondImage = card.querySelector(".flip-card-back").dataset.image;
 
-    const image2 = card
-      .querySelector(".flip-card-back")
-      .dataset.image;
-
-    if (image1 === image2) {
-      matches++;
-
-      if (matchCounter) {
-        matchCounter.textContent = "Matches: " + matches;
-      }
-
+    if (firstImage === secondImage) {
       firstCard.classList.add("matched");
       card.classList.add("matched");
 
+      matches++;
+      matchCounter.textContent = "Matches: " + matches;
+
       firstCard = null;
       boardLocked = false;
-    } else {
-      setTimeout(() => {
-        firstCard.children[0].style.transform = "rotateY(0deg)";
-        card.children[0].style.transform = "rotateY(0deg)";
 
-        firstCard = null;
+      if (matches === images.length) {
+        endGame("You found them all!");
+      }
+    } else {
+      const previousCard = firstCard;
+      firstCard = null;
+
+      setTimeout(() => {
+        previousCard.querySelector(".flip-card-inner").style.transform =
+          "rotateY(0deg)";
+        inner.style.transform = "rotateY(0deg)";
         boardLocked = false;
-      }, 1500);
+      }, 1000);
     }
   });
 });
