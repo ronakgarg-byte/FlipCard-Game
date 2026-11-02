@@ -9,16 +9,37 @@
 .show {
   display: flex !important;
 }
+#wrapper{
+  text-align: center;
+}
+#demo{
+  width: 50px;
+  height: 50px;
+  background-color: brown;
+  border-radius: 90px;
+  /* display: flex; */
+  /* justify-content: center;// */
+  text-align: center;
+  padding: 6px;
+}
+#clickCounter{
+font-weight: 600;
+}
+#matchCounter{
+font-weight: 600;
+}
+
 .screen2 {
   height: 100vh;
   margin: 2rem auto;
   width: 80%;
+  text-align: right;
 }
 #grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 250px);
-  gap: 2rem;
+  grid-template-rows: repeat(3, 200px);
+  gap: 1rem;
 }
 #grid div {
   height: 100%;
@@ -30,7 +51,7 @@
   object-fit: contain;
 }
 .flip-card {
-  perspective: 1000px;
+  perspective: 900px;
 }
 .flip-card-inner {
   position: relative;

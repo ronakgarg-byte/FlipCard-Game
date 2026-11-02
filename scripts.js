@@ -1,11 +1,13 @@
 const screen1 = document.querySelector(".screen1");
 const screen2 = document.querySelector(".screen2");
-const screen3 = document.querySelector(".screen3");
-
 const startBtn = screen1.querySelector("button");
-const flipCards = document.querySelectorAll(".flip-card");
 
+const flipCards = document.querySelectorAll(".flip-card");
 const flipCardBacks = document.querySelectorAll(".flip-card-back");
+
+const timerText = document.getElementById("demo");
+const clickCounter = document.getElementById("clickCounter");
+const matchCounter = document.getElementById("matchCounter");
 
 const images = [
   "anne hathway.jpg",
@@ -15,59 +17,91 @@ const images = [
   "scarlett johanson.jpg",
   "ranbir kapoor.webp",
 ];
-const double = [...images, ...images];
-//makes an  array in which twice thwe umages is there [hrithik,joh, , , , ,]
+
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
+
   return array;
 }
 
-// screen1.classList: add, remove, toggle
-
-startBtn.addEventListener("click", () => {
-
-
-  screen1.classList.add("hide");
-  screen2.classList.remove("hide");
-
-  //PUtting random images in the UI on click of "Start Game" button
-  flipCardBacks.forEach((flipCardBack, index) => {
-    const img = document.createElement("img");
-    img.src = "images/" + shuffledImages[index];
-    flipCardBack.dataset.image = shuffledImages[index];
-    flipCardBack.append(img);
-  });
-  startTimer();
-});
+const shuffledImages = shuffle([...images, ...images]);
 
 let seconds = 60;
 let timer;
 let audioContext;
 
+let firstCard = null;
+let clicks = 0;
+let matches = 0;
+let boardLocked = false;
+let gameOver = false;
+let gameStarted = false;
+
+if (timerText) timerText.textContent = "Time: 60";
+if (clickCounter) clickCounter.textContent = "Clicks: 0";
+if (matchCounter) matchCounter.textContent = "Matches: 0";
+
+startBtn.addEventListener("click", () => {
+  if (gameStarted) return;
+
+  gameStarted = true;
+  screen1.classList.add("hide");
+  screen2.classList.remove("hide");
+
+  flipCardBacks.forEach((flipCardBack, index) => {
+    const img = document.createElement("img");
+
+    img.src = "images/" + shuffledImages[index];
+    img.alt = "Memory game card";
+
+    flipCardBack.dataset.image = shuffledImages[index];
+    flipCardBack.append(img);
+  });
+
+  startTimer();
+
+  // Start button click ke baad sound context start hota hai
+  try {
+    const AudioContext =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (AudioContext) {
+      audioContext = new AudioContext();
+      audioContext.resume();
+    }
+  } catch (error) {
+    console.log("Audio start nahi ho paya.");
+  }
+});
+
 function startTimer() {
-  const timerText = document.getElementById("demo");
-
-  // Start button click ke time sound context banega
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  audioContext.resume();
-
   timer = setInterval(() => {
     seconds--;
 
-    if (seconds === 0) {
-      timerText.textContent = "Game Over";
+    if (seconds <= 0) {
+      seconds = 0;
+      gameOver = true;
+      boardLocked = true;
+
+      if (timerText) timerText.textContent = "Game Over";
+
       clearInterval(timer);
       playBeep();
-    } else {
+      return;
+    }
+
+    if (timerText) {
       timerText.textContent = "Time: " + seconds;
     }
   }, 1000);
 }
 
 function playBeep() {
+  if (!audioContext) return;
+
   const sound = audioContext.createOscillator();
   const volume = audioContext.createGain();
 
@@ -80,18 +114,20 @@ function playBeep() {
   sound.start();
   sound.stop(audioContext.currentTime + 0.5);
 }
-let firstCard = null;
-let clicks = 0;
-let matches = 0;
-let boardLocked = false;
 
 flipCards.forEach((card) => {
   card.addEventListener("click", () => {
-    if (boardLocked || card.classList.contains("matched")) return;
+    // Game start na hua ho, time khatam ho gaya ho,
+    // ya board lock ho, toh click kaam nahi karega
+    if (!gameStarted || gameOver || boardLocked) return;
+    if (card.classList.contains("matched")) return;
     if (card === firstCard) return;
 
     clicks++;
-    document.getElementById("clickCounter").textContent = "Clicks: " + clicks;
+
+    if (clickCounter) {
+      clickCounter.textContent = "Clicks: " + clicks;
+    }
 
     card.children[0].style.transform = "rotateY(180deg)";
 
@@ -102,13 +138,20 @@ flipCards.forEach((card) => {
 
     boardLocked = true;
 
-    const image1 = firstCard.querySelector(".flip-card-back").dataset.image;
-    const image2 = card.querySelector(".flip-card-back").dataset.image;
+    const image1 = firstCard
+      .querySelector(".flip-card-back")
+      .dataset.image;
+
+    const image2 = card
+      .querySelector(".flip-card-back")
+      .dataset.image;
 
     if (image1 === image2) {
       matches++;
-      document.getElementById("matchCounter").textContent =
-        "Matches: " + matches;
+
+      if (matchCounter) {
+        matchCounter.textContent = "Matches: " + matches;
+      }
 
       firstCard.classList.add("matched");
       card.classList.add("matched");
@@ -126,5 +169,3 @@ flipCards.forEach((card) => {
     }
   });
 });
-const shuffledImages = shuffle(double);
-console.log(shuffledImages);
